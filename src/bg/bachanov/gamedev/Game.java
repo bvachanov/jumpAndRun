@@ -3,7 +3,6 @@ package bg.bachanov.gamedev;
 import java.awt.Font;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Random;
 
 import org.lwjgl.LWJGLException;
@@ -35,23 +34,24 @@ public class Game {
 	/** Desired frame time */
 	private static final int FRAMERATE = 60;
 
-	private static final int MAX_LEVEL = 5;
+	private static final int MAX_RESULT_PER_LEVEL = 20;
 	private static final int MAX_LIFES = 3;
 	private static final int MAX_TREASURES_COUNT = 20;
-	private static final int MAX_MINES_COUNT = 5;
+	private static final int MAX_MINES_COUNT = 2;
 	private static final int HERO_START_X = 50;
 	private static final int HERO_START_Y = 500;
 
 	/** Exit the game */
 	private boolean finished;
 
-	private BackgroundTile[] backgroundTile = new BackgroundTile[MAX_LEVEL];
+	private BackgroundTile[] backgroundTile = new BackgroundTile[2];
 	private ArrayList<Entity> entities;
 	private ArrayList<Entity> treasures;
 	private ArrayList<Entity> mines;
 	private HeroEntity heroEntity;
 	private int currentLevel = 1;
 	private int lifes = MAX_LIFES;
+	private LifeIcon lifeIcon;
 
 	private TrueTypeFont font;
 
@@ -143,7 +143,9 @@ public class Game {
 		entities = new ArrayList<Entity>();
 
 		initBackground();
-
+		
+		initHUD();
+				
 		Texture texture;
 
 		// Load hero sprite
@@ -166,6 +168,15 @@ public class Game {
 		backgroundTile[1] = new BackgroundTile(texture);
 
 	}
+	
+	private void initHUD() throws IOException {
+		Texture texture;
+
+		// Load life tiles
+		texture = TextureLoader.getTexture("PNG", ResourceLoader.getResourceAsStream("res/life.png"));
+		lifeIcon = new LifeIcon(texture);
+
+	}
 
 	private void initTreasures() throws IOException {
 		treasures = new ArrayList<Entity>();
@@ -177,7 +188,7 @@ public class Game {
 		int objectY;
 		for (int m = 0; m < MAX_TREASURES_COUNT; m++) {
 			objectX = rand.nextInt(SCREEN_SIZE_WIDTH - texture.getImageWidth());
-			objectY = rand.nextInt(SCREEN_SIZE_HEIGHT - texture.getImageHeight()) * (-1);
+			objectY = rand.nextInt(SCREEN_SIZE_HEIGHT - texture.getImageHeight()) * (-2);
 			TreasureEntity objectEntity = new TreasureEntity(new MySprite(texture), objectX, objectY);
 			treasures.add(objectEntity);
 		}
@@ -186,7 +197,7 @@ public class Game {
 		rand = new Random();
 		for (int m = 0; m < MAX_MINES_COUNT; m++) {
 			objectX = rand.nextInt(SCREEN_SIZE_WIDTH - texture.getImageWidth());
-			objectY = rand.nextInt(SCREEN_SIZE_HEIGHT - texture.getImageHeight()) * (-1);
+			objectY = rand.nextInt(SCREEN_SIZE_HEIGHT - texture.getImageHeight()) * (-2);
 			MineEntity objectEntity = new MineEntity(new MySprite(texture), objectX, objectY);
 			mines.add(objectEntity);
 		}
@@ -197,6 +208,7 @@ public class Game {
 		entity.setX(rand.nextInt(SCREEN_SIZE_WIDTH - entity.getWidth()));
 		entity.setY(rand.nextInt(SCREEN_SIZE_HEIGHT - entity.getHeight()) * (-1));
 	}
+	
 
 	/**
 	 * Runs the game (the "main loop")
@@ -315,22 +327,34 @@ public class Game {
 
 	private void drawHUD() {
 		font.drawString(10, 0,
-				String.format("Treasures collected %d/%d", treasuresCollected, MAX_TREASURES_COUNT * MAX_LEVEL),
+				String.format("Treasures collected %d", treasuresCollected),
+				Color.black);
+		font.drawString(10, 30,
+				String.format("Current level: %d", currentLevel),
 				Color.black);
 
-		font.drawString(SCREEN_SIZE_WIDTH - 120, 0, String.format("Lifes %d/%d", lifes, MAX_LIFES), Color.black);
+		for (int l = 0; l < lifes; l++) {
+			int textureX = SCREEN_SIZE_WIDTH -(lifeIcon.getWidth()+5)*(l+1) ;
+			int textureY = lifeIcon.getHeight();
+			lifeIcon.draw(textureX, textureY);
+		}
+		
+		// font.drawString(SCREEN_SIZE_WIDTH - 120, 0, String.format("Lifes %d/%d", lifes, MAX_LIFES), Color.black);
+		
+
+		
 	}
 
 	private void logicHero() {
 		if (Keyboard.isKeyDown(Keyboard.KEY_RIGHT)) {
 			if (heroEntity.getX() + heroEntity.getWidth() + 10 < Display.getDisplayMode().getWidth()) {
-				heroEntity.setX(heroEntity.getX() + 10);
+				heroEntity.setX(heroEntity.getX() + 10 + currentLevel);
 			}
 		}
 
 		if (Keyboard.isKeyDown(Keyboard.KEY_LEFT)) {
 			if (heroEntity.getX() - 10 >= 0) {
-				heroEntity.setX(heroEntity.getX() - 10);
+				heroEntity.setX(heroEntity.getX() - 10 - currentLevel);
 			}
 		}
 	}
@@ -339,7 +363,7 @@ public class Game {
 		for (Entity entity : treasures) {
 
 			if (entity.getY() + 2 + entity.getHeight() < SCREEN_SIZE_HEIGHT) {
-				entity.setY(entity.getY() + 2);
+				entity.setY(entity.getY() + 1* currentLevel);
 			} else {
 				resetCoordinates(entity);
 			}
@@ -347,7 +371,7 @@ public class Game {
 
 		for (Entity entity : mines) {
 			if (entity.getY() + 2 + entity.getHeight() < SCREEN_SIZE_HEIGHT) {
-				entity.setY(entity.getY() + 2);
+				entity.setY(entity.getY() +1* currentLevel);
 			} else {
 				resetCoordinates(entity);
 			}
@@ -392,6 +416,11 @@ public class Game {
 			// treasures.remove(treasureEntity);
 			resetCoordinates(treasureEntity);
 			treasuresCollected++;
+			if(treasuresCollected == currentLevel * MAX_RESULT_PER_LEVEL){
+				currentLevel++;
+				
+			}
+			
 		} else if (object instanceof MineEntity) {
 			MineEntity mineEntity = (MineEntity) object;
 			// mines.remove(object);
