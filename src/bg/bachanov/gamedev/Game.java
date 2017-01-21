@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Random;
 
+import javax.swing.JOptionPane;
+
 import org.lwjgl.LWJGLException;
 import org.lwjgl.Sys;
 import org.lwjgl.input.Keyboard;
@@ -14,6 +16,9 @@ import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
 import org.newdawn.slick.Color;
 import org.newdawn.slick.TrueTypeFont;
+import org.newdawn.slick.openal.Audio;
+import org.newdawn.slick.openal.AudioLoader;
+import org.newdawn.slick.openal.SoundStore;
 import org.newdawn.slick.opengl.Texture;
 import org.newdawn.slick.opengl.TextureLoader;
 import org.newdawn.slick.util.ResourceLoader;
@@ -52,10 +57,15 @@ public class Game {
 	private int currentLevel = 1;
 	private int lifes = MAX_LIFES;
 	private LifeIcon lifeIcon;
+	private Audio bombSound;
+	private Audio levelUpSound;
+	private Audio gameOverSound;
+	private Audio dingSound;
 
 	private TrueTypeFont font;
 
 	private int treasuresCollected = 0;
+	private int record = 0;
 
 	/**
 	 * Application init
@@ -102,7 +112,7 @@ public class Game {
 		}
 	}
 
-	private void initGL(int width, int height) {
+	private void initGL(int width, int height) throws IOException {
 		try {
 			Display.setDisplayMode(new DisplayMode(width, height));
 			Display.setTitle(GAME_TITLE);
@@ -113,7 +123,7 @@ public class Game {
 			Display.setVSyncEnabled(true);
 
 			// Start up the sound system
-			AL.create();
+			// AL.create();
 		} catch (LWJGLException e) {
 			e.printStackTrace();
 			System.exit(0);
@@ -135,6 +145,12 @@ public class Game {
 		GL11.glOrtho(0, width, height, 0, 1, -1);
 		GL11.glMatrixMode(GL11.GL_MODELVIEW);
 
+		//sounds
+		bombSound = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("res/bomb.wav"));
+		levelUpSound = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("res/levelUp.wav"));
+		dingSound = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("res/ding.wav"));
+		gameOverSound = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("res/gameOver.wav"));
+
 		Font awtFont = new Font("Times New Roman", Font.BOLD, 24);
 		font = new TrueTypeFont(awtFont, true);
 	}
@@ -143,9 +159,9 @@ public class Game {
 		entities = new ArrayList<Entity>();
 
 		initBackground();
-		
+
 		initHUD();
-				
+
 		Texture texture;
 
 		// Load hero sprite
@@ -168,7 +184,7 @@ public class Game {
 		backgroundTile[1] = new BackgroundTile(texture);
 
 	}
-	
+
 	private void initHUD() throws IOException {
 		Texture texture;
 
@@ -208,7 +224,6 @@ public class Game {
 		entity.setX(rand.nextInt(SCREEN_SIZE_WIDTH - entity.getWidth()));
 		entity.setY(rand.nextInt(SCREEN_SIZE_HEIGHT - entity.getHeight()) * (-1));
 	}
-	
 
 	/**
 	 * Runs the game (the "main loop")
@@ -250,10 +265,16 @@ public class Game {
 		// TODO: save anything you want to disk here
 
 		// Stop the sound
-		AL.destroy();
-
+		// AL.destroy();
+		
 		// Close the window
 		Display.destroy();
+	}
+
+	private void resetScore() {
+		lifes = MAX_LIFES;
+		treasuresCollected = 0;
+		currentLevel = 1;
 	}
 
 	/**
@@ -268,12 +289,26 @@ public class Game {
 
 		if (lifes > 0) {
 			logicHero();
+
 			logicEntities();
 
 			checkForCollision();
+
+			SoundStore.get().poll(0);
+
 		} else {
-			Sys.alert(GAME_TITLE, "Game over!");
-			finished = true;
+			gameOverSound.playAsMusic(1.0f, 1.0f, false);
+			int dialogButton = JOptionPane.YES_NO_OPTION;
+			int dialogResult = JOptionPane.showConfirmDialog(null, "Game over. Try again?", GAME_TITLE, dialogButton);
+			if (dialogResult == 0) {
+				// System.out.println("Yes option");
+				cleanup();
+				resetScore();
+				this.start();
+			} else {
+				finished = true;
+			}
+
 		}
 	}
 
@@ -294,7 +329,8 @@ public class Game {
 	}
 
 	private void drawBackground() {
-		for (int a = 0; a * backgroundTile[0].getHeight() < SCREEN_SIZE_HEIGHT - backgroundTile[0].getHeight(); a++) {
+		// don't draw the bottom row
+		for (int a = 0; a * backgroundTile[0].getHeight() < SCREEN_SIZE_HEIGHT - backgroundTile[1].getHeight(); a++) {
 			for (int b = 0; b * backgroundTile[0].getWidth() < SCREEN_SIZE_WIDTH; b++) {
 				int textureX = backgroundTile[0].getWidth() * b;
 				int textureY = backgroundTile[0].getHeight() * a;
@@ -302,7 +338,7 @@ public class Game {
 				backgroundTile[0].draw(textureX, textureY);
 			}
 		}
-
+		// make the bottom of the screen with different texture
 		for (int b = 0; b * backgroundTile[1].getWidth() < SCREEN_SIZE_WIDTH; b++) {
 			int textureX = backgroundTile[1].getWidth() * b;
 			int textureY = SCREEN_SIZE_HEIGHT - backgroundTile[1].getHeight();
@@ -326,23 +362,19 @@ public class Game {
 	}
 
 	private void drawHUD() {
-		font.drawString(10, 0,
-				String.format("Treasures collected %d", treasuresCollected),
-				Color.black);
-		font.drawString(10, 30,
-				String.format("Current level: %d", currentLevel),
-				Color.black);
+		font.drawString(10, 0, String.format("Treasures collected: %d", treasuresCollected), Color.black);
+		font.drawString(10, 30, String.format("Current level: %d", currentLevel), Color.black);
+		font.drawString(10, 60, String.format("Record: %d", record), Color.black);
 
 		for (int l = 0; l < lifes; l++) {
-			int textureX = SCREEN_SIZE_WIDTH -(lifeIcon.getWidth()+5)*(l+1) ;
+			int textureX = SCREEN_SIZE_WIDTH - (lifeIcon.getWidth() + 5) * (l + 1); // add
+																					// space
+																					// between
+																					// icons
 			int textureY = lifeIcon.getHeight();
 			lifeIcon.draw(textureX, textureY);
 		}
-		
-		// font.drawString(SCREEN_SIZE_WIDTH - 120, 0, String.format("Lifes %d/%d", lifes, MAX_LIFES), Color.black);
-		
 
-		
 	}
 
 	private void logicHero() {
@@ -363,16 +395,25 @@ public class Game {
 		for (Entity entity : treasures) {
 
 			if (entity.getY() + 2 + entity.getHeight() < SCREEN_SIZE_HEIGHT) {
-				entity.setY(entity.getY() + 1* currentLevel);
+				entity.setY(entity.getY() + 1 * currentLevel); // move to bottom
+																// with speed
+																// depending on
+																// the level
 			} else {
+				// reset treasure's coordinates if moved out of the screen
 				resetCoordinates(entity);
 			}
 		}
 
 		for (Entity entity : mines) {
 			if (entity.getY() + 2 + entity.getHeight() < SCREEN_SIZE_HEIGHT) {
-				entity.setY(entity.getY() +1* currentLevel);
+				entity.setY(entity.getY() + 1 * currentLevel); // move to bottom
+																// with speed
+																// depending on
+																// the current
+																// level
 			} else {
+				// reset bomb's coordinates if out of the screen
 				resetCoordinates(entity);
 			}
 		}
@@ -413,18 +454,28 @@ public class Game {
 	public void notifyObjectCollision(Entity notifier, Object object) {
 		if (object instanceof TreasureEntity) {
 			TreasureEntity treasureEntity = (TreasureEntity) object;
-			// treasures.remove(treasureEntity);
+			// reset treasure's coordinates
 			resetCoordinates(treasureEntity);
-			treasuresCollected++;
-			if(treasuresCollected == currentLevel * MAX_RESULT_PER_LEVEL){
-				currentLevel++;
-				
+			if (record == treasuresCollected) { // check if record # of
+												// treasures is collected and if
+												// yes update it
+				record++;
 			}
-			
+			treasuresCollected++;
+			dingSound.playAsSoundEffect(1.0f, 1.0f, false);
+			// level up if number of collected treasures reached
+			if (treasuresCollected == currentLevel * currentLevel * MAX_RESULT_PER_LEVEL) {
+				currentLevel++;
+				levelUpSound.playAsSoundEffect(1.0f, 1.0f, false);
+
+			}
+
 		} else if (object instanceof MineEntity) {
 			MineEntity mineEntity = (MineEntity) object;
-			// mines.remove(object);
+			// reset mine's coordinates
 			resetCoordinates(mineEntity);
+			// play bomb sound
+			bombSound.playAsSoundEffect(1.0f, 1.0f, false);
 			lifes--;
 		}
 	}
