@@ -1,0 +1,28 @@
+Additional notes:
+
+Hero:
+- The hero can move left or right.
+- The hero can't move out of the screen.
+- The hero should collect treasures and don't collide with bombs.
+- The hero has 3 lives when starting the game.
+
+Treasures / Gifts:
+- Treasures should be collected by the hero.
+- When a treasure is collected, it's added to the count of treasures collected.
+
+Mines/ Bombs:
+- The hero should not collide with a bomb.
+- If the hero collides with a bomb, he loses 1 of his lives.
+
+Levels:
+- The difference in levels is the speed of the falling objects
+- Next level starts when the number of collected treasures is equal to ( currentLevel * currentLevel * MAX_RESULT_PER_LEVEL)
+
+New game:
+-When user hits 3 bombs, he dies. A dialog is displayed and if the user click OK, a new game starts.
+
+Record:	
+- A record is a max score for a single game start.
+- If user starts the game, record is set to 0.
+- When user collects treasures, they are displayed as collected treasures count.
+- If the # of collected treasures is greater than the record, the record is updated to be equal to the treasures collected.
