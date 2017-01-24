@@ -144,7 +144,7 @@ public class Game {
 		GL11.glOrtho(0, width, height, 0, 1, -1);
 		GL11.glMatrixMode(GL11.GL_MODELVIEW);
 
-		//sounds
+		// sounds
 		bombSound = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("res/bomb.wav"));
 		levelUpSound = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("res/levelUp.wav"));
 		dingSound = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("res/ding.wav"));
@@ -265,7 +265,7 @@ public class Game {
 
 		// Stop the sound
 		// AL.destroy();
-		
+
 		// Close the window
 		Display.destroy();
 	}
@@ -325,6 +325,7 @@ public class Game {
 		heroEntity.draw();
 
 		drawHUD();
+
 	}
 
 	private void drawBackground() {
@@ -361,9 +362,14 @@ public class Game {
 	}
 
 	private void drawHUD() {
-		font.drawString(10, 0, String.format("Treasures collected: %d", treasuresCollected), Color.black);
-		font.drawString(10, 30, String.format("Current level: %d", currentLevel), Color.black);
-		font.drawString(10, 60, String.format("Record: %d", record), Color.black);
+		font.drawString(10, 0, String.format("Treasures collected: %d", treasuresCollected), Color.yellow);
+		font.drawString(10, 30, String.format("Current level: %d", currentLevel), Color.yellow);
+		font.drawString(10, 60, String.format("Record: %d", record), Color.yellow);
+
+		drawLifes();
+	}
+
+	private void drawLifes() {
 
 		for (int l = 0; l < lifes; l++) {
 			int textureX = SCREEN_SIZE_WIDTH - (lifeIcon.getWidth() + 5) * (l + 1); // add
@@ -373,7 +379,6 @@ public class Game {
 			int textureY = lifeIcon.getHeight();
 			lifeIcon.draw(textureX, textureY);
 		}
-
 	}
 
 	private void logicHero() {
