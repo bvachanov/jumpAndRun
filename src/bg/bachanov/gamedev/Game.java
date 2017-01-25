@@ -5,8 +5,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Random;
 
-import javax.swing.JOptionPane;
-
 import org.lwjgl.LWJGLException;
 import org.lwjgl.Sys;
 import org.lwjgl.input.Keyboard;
@@ -15,9 +13,6 @@ import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
 import org.newdawn.slick.Color;
 import org.newdawn.slick.TrueTypeFont;
-import org.newdawn.slick.openal.Audio;
-import org.newdawn.slick.openal.AudioLoader;
-import org.newdawn.slick.openal.SoundStore;
 import org.newdawn.slick.opengl.Texture;
 import org.newdawn.slick.opengl.TextureLoader;
 import org.newdawn.slick.util.ResourceLoader;
@@ -40,7 +35,7 @@ public class Game {
 
 	private static final int MAX_RESULT_PER_LEVEL = 20;
 	private static final int MAX_LIFES = 3;
-	private static final int MAX_TREASURES_COUNT = 20;
+	private static final int MAX_gifts_COUNT = 20;
 	private static final int MAX_MINES_COUNT = 2;
 	private static final int HERO_START_X = 50;
 	private static final int HERO_START_Y = 500;
@@ -48,22 +43,20 @@ public class Game {
 	/** Exit the game */
 	private boolean finished;
 
+	private boolean isPaused;
+
 	private BackgroundTile[] backgroundTile = new BackgroundTile[2];
 	private ArrayList<Entity> entities;
-	private ArrayList<Entity> treasures;
+	private ArrayList<Entity> gifts;
 	private ArrayList<Entity> mines;
 	private HeroEntity heroEntity;
 	private int currentLevel = 1;
 	private int lifes = MAX_LIFES;
 	private LifeIcon lifeIcon;
-	private Audio bombSound;
-	private Audio levelUpSound;
-	private Audio gameOverSound;
-	private Audio dingSound;
 
 	private TrueTypeFont font;
 
-	private int treasuresCollected = 0;
+	private int giftsCollected = 0;
 	private int record = 0;
 
 	/**
@@ -144,11 +137,6 @@ public class Game {
 		GL11.glOrtho(0, width, height, 0, 1, -1);
 		GL11.glMatrixMode(GL11.GL_MODELVIEW);
 
-		// sounds
-		bombSound = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("res/bomb.wav"));
-		levelUpSound = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("res/levelUp.wav"));
-		dingSound = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("res/ding.wav"));
-		gameOverSound = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("res/gameOver.wav"));
 
 		Font awtFont = new Font("Times New Roman", Font.BOLD, 24);
 		font = new TrueTypeFont(awtFont, true);
@@ -168,8 +156,8 @@ public class Game {
 		heroEntity = new HeroEntity(this, new MySprite(texture), HERO_START_X, HERO_START_Y);
 		entities.add(heroEntity);
 
-		// Generate the treasures
-		initTreasures();
+		// Generate the gifts
+		initGifts();
 	}
 
 	private void initBackground() throws IOException {
@@ -193,19 +181,19 @@ public class Game {
 
 	}
 
-	private void initTreasures() throws IOException {
-		treasures = new ArrayList<Entity>();
+	private void initGifts() throws IOException {
+		gifts = new ArrayList<Entity>();
 		mines = new ArrayList<Entity>();
 
 		Texture texture = TextureLoader.getTexture("PNG", ResourceLoader.getResourceAsStream("res/chest.png"));
 		Random rand = new Random();
 		int objectX;
 		int objectY;
-		for (int m = 0; m < MAX_TREASURES_COUNT; m++) {
+		for (int m = 0; m < MAX_gifts_COUNT; m++) {
 			objectX = rand.nextInt(SCREEN_SIZE_WIDTH - texture.getImageWidth());
 			objectY = rand.nextInt(SCREEN_SIZE_HEIGHT - texture.getImageHeight()) * (-2);
-			TreasureEntity objectEntity = new TreasureEntity(new MySprite(texture), objectX, objectY);
-			treasures.add(objectEntity);
+			GiftEntity objectEntity = new GiftEntity(new MySprite(texture), objectX, objectY);
+			gifts.add(objectEntity);
 		}
 
 		texture = TextureLoader.getTexture("PNG", ResourceLoader.getResourceAsStream("res/mine.png"));
@@ -231,17 +219,18 @@ public class Game {
 		while (!finished) {
 			// Always call Window.update(), all the time
 			Display.update();
-
 			if (Display.isCloseRequested()) {
 				// Check for O/S close requests
 				finished = true;
 			} else if (Display.isActive()) {
-				// The window is in the foreground, so we should play the game
+				// The window is in the foreground, so we should play the
+				// game
 				logic();
 				render();
 				Display.sync(FRAMERATE);
 			} else {
-				// The window is not in the foreground, so we can allow other
+				// The window is not in the foreground, so we can allow
+				// other
 				// stuff to run and
 				// infrequently update
 				try {
@@ -250,7 +239,8 @@ public class Game {
 				}
 				logic();
 				if (Display.isVisible() || Display.isDirty()) {
-					// Only bother rendering if the window is visible or dirty
+					// Only bother rendering if the window is visible or
+					// dirty
 					render();
 				}
 			}
@@ -272,8 +262,9 @@ public class Game {
 
 	private void resetScore() {
 		lifes = MAX_LIFES;
-		treasuresCollected = 0;
+		giftsCollected = 0;
 		currentLevel = 1;
+		isPaused = false;
 	}
 
 	/**
@@ -286,29 +277,35 @@ public class Game {
 			finished = true;
 		}
 
+		else if (Keyboard.isKeyDown(Keyboard.KEY_P) ) {
+			isPaused =true;
+		}
+		
+		else if (Keyboard.isKeyDown(Keyboard.KEY_R) ) {
+			isPaused =false;
+		}
+		
+		else if (Keyboard.isKeyDown(Keyboard.KEY_N)){
+			//reset game
+			// cleanup();
+			resetScore();
+			try {
+				initTextures();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			run();
+		}
+
 		if (lifes > 0) {
-			logicHero();
-
-			logicEntities();
-
-			checkForCollision();
-
-			SoundStore.get().poll(0);
-
-		} else {
-			gameOverSound.playAsMusic(1.0f, 1.0f, false);
-			int dialogButton = JOptionPane.YES_NO_OPTION;
-			int dialogResult = JOptionPane.showConfirmDialog(null, "Game over. Try again?", GAME_TITLE, dialogButton);
-			if (dialogResult == 0) {
-				// System.out.println("Yes option");
-				cleanup();
-				resetScore();
-				this.start();
-			} else {
-				finished = true;
+			if (!isPaused) {
+				logicHero();
+				logicEntities();
+				checkForCollision();
 			}
 
-		}
+		} 
 	}
 
 	/**
@@ -348,7 +345,7 @@ public class Game {
 
 	private void drawObjects() {
 
-		for (Entity entity : treasures) {
+		for (Entity entity : gifts) {
 			if (entity.isVisible()) {
 				entity.draw();
 			}
@@ -362,11 +359,27 @@ public class Game {
 	}
 
 	private void drawHUD() {
-		font.drawString(10, 0, String.format("Treasures collected: %d", treasuresCollected), Color.yellow);
-		font.drawString(10, 30, String.format("Current level: %d", currentLevel), Color.yellow);
-		font.drawString(10, 60, String.format("Record: %d", record), Color.yellow);
+		if (lifes > 0) {
+			font.drawString(10, 0, String.format("Gifts collected: %d", giftsCollected), Color.yellow);
+			font.drawString(10, 30, String.format("Current level: %d", currentLevel), Color.yellow);
+			font.drawString(10, 60, String.format("Record: %d", record), Color.yellow);
 
-		drawLifes();
+			drawLifes();
+			
+			if(isPaused){
+				// pause message
+				font.drawString(190, 300, String.format("Game paused. Press R to resume."), Color.yellow);
+			}
+		}
+		
+		else {
+			// game over message
+			font.drawString(190, 200, String.format("Game over!"), Color.yellow);
+			font.drawString(190, 230, String.format("Current score: %d", giftsCollected), Color.yellow);
+			font.drawString(190, 260, String.format("Record: %d", record), Color.yellow);
+			font.drawString(190, 290, String.format("Press N for new game or ECS for exit."), Color.yellow);
+
+		}
 	}
 
 	private void drawLifes() {
@@ -396,7 +409,7 @@ public class Game {
 	}
 
 	private void logicEntities() {
-		for (Entity entity : treasures) {
+		for (Entity entity : gifts) {
 
 			if (entity.getY() + 2 + entity.getHeight() < SCREEN_SIZE_HEIGHT) {
 				entity.setY(entity.getY() + 1 * currentLevel); // move to bottom
@@ -436,8 +449,8 @@ public class Game {
 			}
 		}
 
-		for (int i = 0; i < treasures.size(); i++) {
-			Entity him = treasures.get(i);
+		for (int i = 0; i < gifts.size(); i++) {
+			Entity him = gifts.get(i);
 
 			if (heroEntity.collidesWith(him)) {
 				heroEntity.collidedWith(him);
@@ -456,21 +469,19 @@ public class Game {
 	}
 
 	public void notifyObjectCollision(Entity notifier, Object object) {
-		if (object instanceof TreasureEntity) {
-			TreasureEntity treasureEntity = (TreasureEntity) object;
+		if (object instanceof GiftEntity) {
+			GiftEntity treasureEntity = (GiftEntity) object;
 			// reset treasure's coordinates
 			resetCoordinates(treasureEntity);
-			if (record == treasuresCollected) { // check if record # of
-												// treasures is collected and if
-												// yes update it
+			if (record == giftsCollected) { // check if record # of
+											// gifts is collected and if
+											// yes update it
 				record++;
 			}
-			treasuresCollected++;
-			dingSound.playAsSoundEffect(1.0f, 1.0f, false);
-			// level up if number of collected treasures reached
-			if (treasuresCollected == currentLevel * currentLevel * MAX_RESULT_PER_LEVEL) {
+			giftsCollected++;
+			// level up if number of collected gifts reached
+			if (giftsCollected == currentLevel * currentLevel * MAX_RESULT_PER_LEVEL) {
 				currentLevel++;
-				levelUpSound.playAsSoundEffect(1.0f, 1.0f, false);
 
 			}
 
@@ -479,7 +490,6 @@ public class Game {
 			// reset mine's coordinates
 			resetCoordinates(mineEntity);
 			// play bomb sound
-			bombSound.playAsSoundEffect(1.0f, 1.0f, false);
 			lifes--;
 		}
 	}

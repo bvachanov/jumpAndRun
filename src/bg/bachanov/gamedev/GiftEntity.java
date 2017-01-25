@@ -1,8 +1,8 @@
 package bg.bachanov.gamedev;
 
-public class TreasureEntity extends Entity{
+public class GiftEntity extends Entity{
 
-	public TreasureEntity(MySprite sprite, int x, int y) {
+	public GiftEntity(MySprite sprite, int x, int y) {
 		super(sprite, x, y);
 	}
 
