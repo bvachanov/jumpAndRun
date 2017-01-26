@@ -30,3 +30,9 @@ Record:
 
 Lives:
 icon: http://lovefm.com/wp-content/uploads/2015/05/16x16-heart-red-valentine-icon.png
+
+Sounds:
+- bomb: https://www.freesoundeffects.com/free-sounds/bomb-10076/bomb.wav
+- level up: http://opengameart.org/content/level-up-sound-effects
+- game over: https://www.freesoundeffects.com/searches/yellgroan/yellgroan2.wav
+- ding: http://www.mediafire.com/file/ajhp232aey6uesf/Ding+-+Sound+Effects+YouTube.wav
