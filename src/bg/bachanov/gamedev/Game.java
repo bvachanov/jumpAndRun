@@ -8,11 +8,14 @@ import java.util.Random;
 import org.lwjgl.LWJGLException;
 import org.lwjgl.Sys;
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.openal.AL;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
 import org.newdawn.slick.Color;
 import org.newdawn.slick.TrueTypeFont;
+import org.newdawn.slick.openal.Audio;
+import org.newdawn.slick.openal.AudioLoader;
 import org.newdawn.slick.opengl.Texture;
 import org.newdawn.slick.opengl.TextureLoader;
 import org.newdawn.slick.util.ResourceLoader;
@@ -44,6 +47,11 @@ public class Game {
 	private boolean finished;
 
 	private boolean isPaused;
+
+	private Audio mineSound;
+	private Audio levelUpSound;
+	private Audio gameOverSound;
+	private Audio dingSound;
 
 	private BackgroundTile[] backgroundTile = new BackgroundTile[2];
 	private ArrayList<Entity> entities;
@@ -114,6 +122,11 @@ public class Game {
 			// Enable vsync if we can
 			Display.setVSyncEnabled(true);
 
+			// sounds
+			mineSound = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("res/bomb.wav"));
+			levelUpSound = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("res/levelUp.wav"));
+			dingSound = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("res/ding.wav"));
+			gameOverSound = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("res/gameOver.wav"));
 			// Start up the sound system
 			// AL.create();
 		} catch (LWJGLException e) {
@@ -254,7 +267,7 @@ public class Game {
 		// TODO: save anything you want to disk here
 
 		// Stop the sound
-		// AL.destroy();
+		 AL.destroy();
 
 		// Close the window
 		Display.destroy();
@@ -277,17 +290,20 @@ public class Game {
 			finished = true;
 		}
 
-		else if (Keyboard.isKeyDown(Keyboard.KEY_P) ) {
-			isPaused =true;
+		else if (Keyboard.isKeyDown(Keyboard.KEY_P)) {
+			isPaused = true;
 		}
-		
-		else if (Keyboard.isKeyDown(Keyboard.KEY_R) ) {
-			isPaused =false;
+
+		else if (Keyboard.isKeyDown(Keyboard.KEY_R)) {
+			isPaused = false;
 		}
-		
-		else if (Keyboard.isKeyDown(Keyboard.KEY_N)){
-			//reset game
-			// cleanup();
+
+		else if (Keyboard.isKeyDown(Keyboard.KEY_N)) {
+			//reset all sounds;
+			mineSound.stop();
+			levelUpSound.stop();
+			dingSound.stop();
+			gameOverSound.stop();
 			resetScore();
 			try {
 				initTextures();
@@ -305,7 +321,7 @@ public class Game {
 				checkForCollision();
 			}
 
-		} 
+		}
 	}
 
 	/**
@@ -365,19 +381,19 @@ public class Game {
 			font.drawString(10, 60, String.format("Record: %d", record), Color.yellow);
 
 			drawLifes();
-			
-			if(isPaused){
+
+			if (isPaused) {
 				// pause message
 				font.drawString(190, 300, String.format("Game paused. Press R to resume."), Color.yellow);
 			}
 		}
-		
+
 		else {
 			// game over message
 			font.drawString(190, 200, String.format("Game over!"), Color.yellow);
 			font.drawString(190, 230, String.format("Current score: %d", giftsCollected), Color.yellow);
 			font.drawString(190, 260, String.format("Record: %d", record), Color.yellow);
-			font.drawString(190, 290, String.format("Press N for new game or ECS for exit."), Color.yellow);
+			font.drawString(190, 290, String.format("Press N for new game or ESC for exit."), Color.yellow);
 
 		}
 	}
@@ -478,10 +494,12 @@ public class Game {
 											// yes update it
 				record++;
 			}
+			dingSound.playAsSoundEffect(1.0f, 1.0f, false);
 			giftsCollected++;
 			// level up if number of collected gifts reached
 			if (giftsCollected == currentLevel * currentLevel * MAX_RESULT_PER_LEVEL) {
 				currentLevel++;
+				levelUpSound.playAsSoundEffect(1.0f, 1.0f, false);
 
 			}
 
@@ -490,7 +508,12 @@ public class Game {
 			// reset mine's coordinates
 			resetCoordinates(mineEntity);
 			// play bomb sound
+			mineSound.playAsSoundEffect(1.0f, 1.0f, false);
 			lifes--;
+			if(lifes == 0){
+				//sound
+				gameOverSound.playAsSoundEffect(1.0f, 1.0f, false);
+			}
 		}
 	}
 }
