@@ -290,27 +290,30 @@ public class Game {
 			finished = true;
 		}
 
-		else if (Keyboard.isKeyDown(Keyboard.KEY_P)) {
+		else if (Keyboard.isKeyDown(Keyboard.KEY_P)) { // pause game
 			isPaused = true;
 		}
 
-		else if (Keyboard.isKeyDown(Keyboard.KEY_R)) {
+		else if (Keyboard.isKeyDown(Keyboard.KEY_R)) { // resume game
 			isPaused = false;
 		}
 
-		else if (Keyboard.isKeyDown(Keyboard.KEY_N)) {
-			//reset all sounds;
+		else if (Keyboard.isKeyDown(Keyboard.KEY_N)) { // new game
+			// reset all sounds;
 			mineSound.stop();
 			levelUpSound.stop();
 			dingSound.stop();
 			gameOverSound.stop();
+			// reset score
 			resetScore();
+			//re-init textures
 			try {
 				initTextures();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			//run
 			run();
 		}
 
@@ -383,8 +386,12 @@ public class Game {
 			drawLifes();
 
 			if (isPaused) {
-				// pause message
+				// paused message
 				font.drawString(190, 300, String.format("Game paused. Press R to resume."), Color.yellow);
+			}
+			else{
+				// pause message
+				font.drawString(10, SCREEN_SIZE_HEIGHT-30, String.format("Press P for pause."), Color.yellow);
 			}
 		}
 
@@ -433,7 +440,7 @@ public class Game {
 																// depending on
 																// the level
 			} else {
-				// reset treasure's coordinates if moved out of the screen
+				// reset gift's coordinates if moved out of the screen
 				resetCoordinates(entity);
 			}
 		}
@@ -446,7 +453,7 @@ public class Game {
 																// the current
 																// level
 			} else {
-				// reset bomb's coordinates if out of the screen
+				// reset mine's coordinates if out of the screen
 				resetCoordinates(entity);
 			}
 		}
@@ -486,9 +493,9 @@ public class Game {
 
 	public void notifyObjectCollision(Entity notifier, Object object) {
 		if (object instanceof GiftEntity) {
-			GiftEntity treasureEntity = (GiftEntity) object;
-			// reset treasure's coordinates
-			resetCoordinates(treasureEntity);
+			GiftEntity giftEntity = (GiftEntity) object;
+			// reset gift's coordinates
+			resetCoordinates(giftEntity);
 			if (record == giftsCollected) { // check if record # of
 											// gifts is collected and if
 											// yes update it
@@ -499,6 +506,7 @@ public class Game {
 			// level up if number of collected gifts reached
 			if (giftsCollected == currentLevel * currentLevel * MAX_RESULT_PER_LEVEL) {
 				currentLevel++;
+				//sound
 				levelUpSound.playAsSoundEffect(1.0f, 1.0f, false);
 
 			}
