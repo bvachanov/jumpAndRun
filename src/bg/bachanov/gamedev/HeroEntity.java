@@ -13,7 +13,7 @@ public class HeroEntity extends Entity {
 	@Override
 	public void collidedWith(Entity other) {
 		Game myGame = (Game) game;
-		System.out.println("Collision detected HeroEntity");
+		// System.out.println("Collision detected HeroEntity");
 		myGame.notifyObjectCollision(this, other);
 	}
 }
