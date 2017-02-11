@@ -162,14 +162,8 @@ public class Game {
 
 		initHUD();
 
-		Texture texture;
+		initHero();
 
-		// Load hero sprite
-		texture = TextureLoader.getTexture("PNG", ResourceLoader.getResourceAsStream("res/avatar.png"));
-		heroEntity = new HeroEntity(this, new MySprite(texture), HERO_START_X, HERO_START_Y);
-		entities.add(heroEntity);
-
-		// Generate the gifts
 		initGifts();
 	}
 
@@ -192,6 +186,14 @@ public class Game {
 		texture = TextureLoader.getTexture("PNG", ResourceLoader.getResourceAsStream("res/life.png"));
 		lifeIcon = new LifeIcon(texture);
 
+	}
+	
+	private void initHero() throws IOException{
+		Texture texture;
+		// Load hero sprite
+		texture = TextureLoader.getTexture("PNG", ResourceLoader.getResourceAsStream("res/avatar.png"));
+		heroEntity = new HeroEntity(this, new MySprite(texture), HERO_START_X, HERO_START_Y);
+		entities.add(heroEntity);
 	}
 
 	private void initGifts() throws IOException {
@@ -389,10 +391,6 @@ public class Game {
 				// paused message
 				font.drawString(190, 300, String.format("Game paused. Press R to resume."), Color.yellow);
 			}
-			else{
-				// pause message
-				font.drawString(10, SCREEN_SIZE_HEIGHT-30, String.format("Press P for pause."), Color.yellow);
-			}
 		}
 
 		else {
@@ -493,35 +491,40 @@ public class Game {
 
 	public void notifyObjectCollision(Entity notifier, Object object) {
 		if (object instanceof GiftEntity) {
-			GiftEntity giftEntity = (GiftEntity) object;
-			// reset gift's coordinates
-			resetCoordinates(giftEntity);
-			if (record == giftsCollected) { // check if record # of
-											// gifts is collected and if
-											// yes update it
-				record++;
-			}
-			dingSound.playAsSoundEffect(1.0f, 1.0f, false);
-			giftsCollected++;
-			// level up if number of collected gifts reached
-			if (giftsCollected == currentLevel * currentLevel * MAX_RESULT_PER_LEVEL) {
-				currentLevel++;
-				//sound
-				levelUpSound.playAsSoundEffect(1.0f, 1.0f, false);
-
-			}
+			notifyGiftCollision((GiftEntity) object);			
 
 		} else if (object instanceof MineEntity) {
-			MineEntity mineEntity = (MineEntity) object;
-			// reset mine's coordinates
-			resetCoordinates(mineEntity);
-			// play bomb sound
-			mineSound.playAsSoundEffect(1.0f, 1.0f, false);
-			lifes--;
-			if(lifes == 0){
-				//sound
-				gameOverSound.playAsSoundEffect(1.0f, 1.0f, false);
-			}
+			notifyMineCollision((MineEntity) object);
+			
 		}
+	}
+	private void notifyGiftCollision(GiftEntity giftEntity){
+		// reset gift's coordinates
+		resetCoordinates(giftEntity);
+		giftsCollected++;
+		if (record <= giftsCollected) { // check if record # of
+										// gifts is collected and if
+										// yes update it
+			record = giftsCollected;
+		}
+		dingSound.playAsSoundEffect(1.0f, 1.0f, false);
+		// level up if number of collected gifts reached
+		if (giftsCollected == currentLevel * currentLevel * MAX_RESULT_PER_LEVEL) {
+			currentLevel++;
+			//sound
+			levelUpSound.playAsSoundEffect(1.0f, 1.0f, false);
+		}
+	}
+	
+	private void notifyMineCollision(MineEntity mineEntity){
+		// reset mine's coordinates
+					resetCoordinates(mineEntity);
+					// play bomb sound
+					mineSound.playAsSoundEffect(1.0f, 1.0f, false);
+					lifes--;
+					if(lifes == 0){
+						//sound
+						gameOverSound.playAsSoundEffect(1.0f, 1.0f, false);
+					}
 	}
 }
